@@ -1,0 +1,38 @@
+def fnc_counter(sh):
+
+    while True:
+
+        if sh.counter >= sh.end:  
+            break
+
+        sh.elms[sh.counter] += 1     
+
+        sh.mutex.lock()
+        sh.counter += 1                        
+        sh.mutex.unlock()
+
+
+V kóde vyššie vidíme, že kritická oblasť medzi uzamknutím a odomknutím zámku obsahuje inkrementáciu counter premennej,
+ ktorá je indexom do poľa elms. Nižšie uvádzam výstup funkcie histogram.
+
+
+K čomu dochádza:
+
+Trieda shared obsahuje premenné, ktoré sú zdieľané medzi váknami. Neparalelná časť je v tomto príklade
+iba inkrementácia counter premennej - zaručuje prechod na nasledujúci prvok poľa. Uvažujme, že hodnota counter je n.
+Jedno vlákno správne inkrementuje prvok na n-tej pozícií poľa z 0 do 1. Plánovač preplánuje na beh druhé vlákno,
+ čiže v tomto momente pôvodné vlákno nedosiahne do kritickej oblasti, nedôjde k presunu na prvok poľa s indexom n+1. 
+V druhom vlákne dôjde k ďalšej inkrementácií nad prvkom poľa s indexom n. Zvolenie takejto kritickej oblasti je nesprávne
+
+Vo výsledkoch nižšie vidíme početnosti čísel v poli elms.
+
+{1: 999999, 2: 1}
+{1: 999999, 2: 1}
+{1: 999999, 2: 1}
+{1: 999999, 2: 1}
+{1: 999999, 2: 1}
+{1: 999999, 2: 1}
+{1: 999998, 0: 1, 2: 1}
+{1: 999997, 2: 2, 0: 1}
+{1: 999999, 2: 1}
+{1: 999999, 2: 1}

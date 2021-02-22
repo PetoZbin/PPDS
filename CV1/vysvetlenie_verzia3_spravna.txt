@@ -1,0 +1,30 @@
+def fnc_counter(sh):
+
+    while True:
+
+        sh.mutex.lock()
+
+        if sh.counter >= sh.end:
+            sh.mutex.unlock()
+            break
+
+        sh.elms[sh.counter] += 1
+        sh.counter += 1
+        sh.mutex.unlock()
+
+
+K čomu dochádza:
+
+Trieda shared obsahuje premenné, ktoré sú zdieľané medzi váknami. Vo verzii 2 popisujem uviaznutie vlákna. Výsledok bol však očakávaný.
+Chybou kódu bolo, že po dosiahnutí konca poľa došlo k uzamknutiu zámku a cyklus skončil na podmienke. K odomknutiu nedošlo, vlákno uviazlo.
+Ako nápravu som pridal odomknutie zákmu do podmienky pred break. Zámok je odomknutý, môže teda dojsť k naplánovaniu ďalšieho vlákna.
+
+Vo výsledkoch nižšie vidíme početnosti čísel v poli elms - výsledok je správny.
+
+{1: 1000000}
+{1: 1000000}
+{1: 1000000}
+{1: 1000000}
+{1: 1000000}
+{1: 1000000}
+{1: 1000000}

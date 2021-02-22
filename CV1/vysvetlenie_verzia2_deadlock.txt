@@ -1,0 +1,32 @@
+def fnc_counter(sh):
+
+    while True:
+
+        sh.mutex.lock()
+
+        if sh.counter >= sh.end:  # tento test nie je postacujuci - out of range exception
+            break
+
+        sh.elms[sh.counter] += 1       
+        print(sh.elms)			# informatívny výpis
+        sh.counter += 1                        
+        sh.mutex.unlock()
+
+V kóde vyššie vidíme, že kritická oblasť medzi uzamknutím a odomknutím zámku obsahuje celý kód whole cyklu.
+
+
+K čomu dochádza:
+
+Trieda shared obsahuje premenné, ktoré sú zdieľané medzi váknami. Z výstupu nižšie vidíme priebežný výpis,
+ ktorý vyzerá ako očakávaný. Dochádza však k deadlocku. Uvažujme že pole má n prvkov. V opakovaní cyklu n-1 je counter
+inkrementovaný na hodnotu n - za koncovým indexom poľa. Na začiatku nekonečného cyklu dochádza k uzamknutiu zámku.
+ Splní sa podmienka pre ukončenie cyklu cez break, nedosiahneme tak odomknutie zámku. Tým pádom nemôže dojsť
+ k preplánovaniu na ďalšie vlákno, proces uviazne v deadlocku.
+
+Vo výsledkoch nižšie vidíme početnosti čísel v poli elms.
+
+[1, 0, 0, 0, 0]
+[1, 1, 0, 0, 0]
+[1, 1, 1, 0, 0]
+[1, 1, 1, 1, 0]
+[1, 1, 1, 1, 1]
