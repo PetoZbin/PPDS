@@ -1,0 +1,50 @@
+Otázky na zamyslenie (odpovede očakávam vo vypracovaní):
+1) Aký je najmenší počet synchronizačných objektov (semafory, mutexy, udalosti) potrebných na riešenie tejto úlohy?
+
+Podľa mňa je najmenší počet syn. objektov n. Každé vlákno vykoná 1 výpočet, musia byť synchronizované jedno po druhom.
+Každé vlákno by malo držať hodnotu svojho synchronizačného objektu aby vedelo, že má alebo nemá byť prepustené. Túto hodnotu meníme 
+počas behu programu, spúšťame konkrétne vlákno podľa následnosti v poli vláken.
+
+2) Ktoré z prebratých synchronizačných vzorov (vzájomné vylúčenie, signalizácia, rendezvous, bariéra) sa dajú (rozumne) využiť pri riešení
+ tejto úlohy? Konkrétne popíšte, ako sa ten-ktorý synchronizačný vzor využíva vo vašom riešení.
+
+Moje riešenie spočíva v použití N semaforov alebo N eventov. Mám zdieľaný objekt triedy Shared, 
+kde som naimplementoval zoznam týchto synchronizačných objektov, ktorých index v zozname prislúcha 
+príslušnému vláknu (indexu v zozname vláken).
+
+        if self.implementation == "semaphores":
+
+            for i in range(n + 2):
+                self.syn_patterns.append(Semaphore(0))
+
+            self.syn_patterns[0].signal(1)
+            self.syn_patterns[1].signal(2)
+
+Vyššie vidíme úryvok implementácie pomocou semaforov. Prvý semafor (ind 0) nainicializujem na 1 a druhý na 2. Všetky ostatné na 0.
+
+	shared.syn_patterns[i+1].wait()      
+    	shared.syn_patterns[i].wait()
+	shared.sequence[i+2] = shared.sequence[i] + shared.sequence[i+1]
+	shared.syn_patterns[i+2].signal(2) 
+
+Vyššie máme implementáciu počítania fibonaciho sekvencie (kód 1 vlákna). Uvažujme, že začíname s indexom i=0.
+0 index wait zoberie token semaforu, ostane 0. Index 1 zoberie tiež 1 token, hodnota semafora na tomto indexe ostane 1 ,čo
+je dôležité pre naplánovanie ďalšieho behu (toto vlákno používame v nasledujúcom behu výpočtu). Po spočítaní a uložení nového prvku
+index i + 2 (pre náš príklad prvok tretí) nasleduje nastavenie semafora na hodnotu 2. Teraz má semafor[1] 1 token, semafor[2] tokeny 2.
+Semafory pre iné vlákna majú 0 tokenov, čakajú.
+
+		self.syn_patterns[0].signal()
+            	self.syn_patterns[1].signal()
+
+
+Vyššie vidíme úryvok implementácie pomocou udalostí. Prvým dvom indexom dáme signal hodnotu.
+
+		shared.syn_patterns[i+1].wait()
+    		shared.syn_patterns[i].wait()
+
+Na 2 rôznych synchronizačných objektoch voláme wait, použijeme kód zo semaforov.
+
+ shared.syn_patterns[i+2].signal()
+
+Po výpočte zavoláme signal, aby nasledujúce vlákna boli prepustené.
+
