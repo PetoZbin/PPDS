@@ -1,0 +1,62 @@
+Problém H2O
+
+class Shared:
+
+    def __init__(self):
+
+        self.molecules_formed = 0
+        self.actual_molecule_bonds = 0      # pocet vazieb aby sa sformovala molekula je 3
+
+        self.oxygens_available = 0
+        self.hydrogens_available = 0
+        self.oxyQueue = Semaphore(0)        # semafory, kde cakaju kysliky / vodiky
+        self. hydroQueue = Semaphore(0)
+        self.mutex = Mutex()
+        self.barrier = Barrier(3)
+
+Vidíme zdieľanú premennú shared. V nej sú dôležité semafory oxyQueue a hydroQueue. Na týchto semaforoch
+čakajú konkrétne atómy na signál, kedy môžu vytvoriť väzbu (máme 2 vodíky a 1 kyslík). V mojej implementácii 
+používam znovupoužiteľnú bariéru, ktorú sme implementovali v cvičení 2. Bariéra prepúšťa vlákna, keď skompletizujú
+molekulu vody, čiže 3 vlákna (2xH, 1xO). Mutex používam kvôli zachovaniu integrity premennej - kontrola v podmienke.
+
+def oxygen(shared, thread_id):
+
+    shared.mutex.lock()
+
+    shared.oxygens_available += 1
+
+    if shared.hydrogens_available < 2:
+        shared.mutex.unlock()
+    else:
+        shared.consume_atoms()
+        shared.oxyQueue.signal()
+        shared.hydroQueue.signal(2)
+
+    shared.oxyQueue.wait()
+    bond(shared, "kyslik", thread_id)
+
+    shared.barrier.wait()
+    shared.mutex.unlock()
+
+Funkcia kyslíka na poslednom jej riadku odomyká mutex. Kyslík máme iba jeden, preto je to vhodné umiestnenie.
+Keby je v kóde vodíka, nastane problém. Uvažujme poradie kyslík, vodík, vodík. Stretli by sa na bariére, ktorá by ich prepustila.
+Tu by sa druhý vodík snažil odomknúť už odomknutý mutex.
+
+def hydrogen(shared, thread_id):
+
+    shared.mutex.lock()
+    shared.hydrogens_available += 1
+
+    if (shared.oxygens_available < 1) or (shared.hydrogens_available < 2):
+        shared.mutex.unlock()
+    else:
+        shared.consume_atoms()
+        shared.oxyQueue.signal()
+        shared.hydroQueue.signal(2)
+
+    shared.hydroQueue.wait()
+    bond(shared, "vodik", thread_id)
+
+    shared.barrier.wait()
+
+Kód vodíka pracuje na rovnakom princípe ako kyslík, neodomyká však mutex po sformovaní molekuly.
