@@ -14,12 +14,48 @@ class Shared:
         self.oxyQueue = Semaphore(0)  # semafory, kde cakaju kysliky / vodiky
         self.hydroQueue = Semaphore(0)
         self.mutex = Mutex()
-        self.barrier = Semaphore(3)
-        pass
+        self.barrier = Barrier(3)
 
     def consume_atoms(self):
         self.oxygens_available -= 1
         self.hydrogens_available -= 2
+
+
+class SimpleBarrier:
+
+    def __init__(self, n):
+        self.n = n
+        self.count = 0
+        self.mutex = Mutex()
+        self.turnstile = Semaphore(0)
+
+    def wait(self):
+
+        self.mutex.lock()
+
+        self.count += 1
+
+        if self.count == self.n:
+            self.count = 0
+            # nabijem turniket
+            for i in range(self.n):
+                self.turnstile.signal()  # prepustim n vlaken
+
+        self.mutex.unlock()
+
+        self.turnstile.wait()  # wait pre n vlaken, ktore naraz prepustam
+
+
+class Barrier:
+
+    def __init__(self, n):
+
+        self.sb1 = SimpleBarrier(n)
+        self.sb2 = SimpleBarrier(n)
+
+    def wait(self):
+        self.sb1.wait()
+        self.sb2.wait()
 
 
 def oxygen(shared, thread_id):
