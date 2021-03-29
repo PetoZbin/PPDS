@@ -7,7 +7,7 @@ class Shared:
     def __init__(self):
 
         self.molecules_formed = 0
-        self.actual_molecule_bonds = 0  # naratava do 3 vazieb pre molekulu
+        self.actual_molecule_bonds = 0  # molekula ma mat 3 atomy
 
         self.oxygens_available = 0
         self.hydrogens_available = 0
@@ -22,7 +22,7 @@ class Shared:
         self.hydrogens_available -= 2
 
 
-def oxygen(shared):     # kod hydrogen a oxygen na zaklade prednasky
+def oxygen(shared, thread_id):
 
     sleep(0.001)
     shared.mutex.lock()
@@ -37,13 +37,13 @@ def oxygen(shared):     # kod hydrogen a oxygen na zaklade prednasky
         shared.hydroQueue.signal(2)
 
     shared.oxyQueue.wait()
-    bond(shared)
+    bond(shared, "kyslik", thread_id)
 
     shared.barrier.wait()
     shared.mutex.unlock()
 
 
-def hydrogen(shared):
+def hydrogen(shared, thread_id):
 
     sleep(0.001)
     shared.mutex.lock()
@@ -57,16 +57,45 @@ def hydrogen(shared):
         shared.hydroQueue.signal(2)
 
     shared.hydroQueue.wait()
-    bond(shared)
+    bond(shared, "vodik", thread_id)
 
     shared.barrier.wait()
 
 
-def bond(shared):
+def bond(shared, forming_element, thread_id):
 
-    pass
+    print("Sucastou vazby je vlakno prvku: " +
+          str(forming_element) + " id vlakna: " + str(thread_id))
+    shared.actual_molecule_bonds += 1
+
+    if shared.actual_molecule_bonds == 3:
+        shared.molecules_formed += 1
+        print("Molekula vody s poradovym cislom: " +
+              str(shared.molecules_formed) + " vytvorena")
+        shared.actual_molecule_bonds = 0
+        print("\n")
+
+
+def create_threads(num_threads, shared, fnc):  # vytvor n vlakien
+
+    threads = list()
+
+    for i in range(num_threads):
+
+        threads.append(Thread(fnc, shared, i))
+
+    return threads
 
 
 if __name__ == '__main__':
 
     shared = Shared()
+
+    oxygen_threads = create_threads(1000, shared, oxygen)
+    hydrogen_threads = create_threads(2000, shared, hydrogen)
+
+    for thread in oxygen_threads:
+        thread.join()
+
+    for thread in hydrogen_threads:
+        thread.join()
